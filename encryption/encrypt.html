@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"
+  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+  crossorigin="anonymous"></script>
+    
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/pbkdf2.js"></script>
+  <script type="text/javascript" src="md5-min.js"></script>
+  </head>
+
+  <body>
+    
+    <h1>Authentication Checker</h1>
+    <input type="file" id="file-input" >
+    <input type="file" id="file-input2" > <br><br>
+    <button onclick="hashCode()" type="" name="" id="hash">Click me for hash</button> <br><br>
+    <button id="encrypt" onclick="myEncrypt()">Encrypt File</button><br><br>
+    <div id="encrypted"><p>Before encrypt</p></div>
+    <div id="decrypted"><p>After encrypt</p></div> 
+    <p id="hash-content"></p>
+    <p id="hash-content2"></p>
+    <div id="file-content"></div>
+
+  </body>
+
+</html>
+<script type="text/javascript">
+
+  document.getElementById("encrypt").disabled = true;
+
+  var contents;
+  var contents2;
+  var message;
+  var message2;
+
+  function readSingleFile(e) {
+    var file = e.target.files[0];
+    if (!file) {
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      contents = e.target.result;
+      // Display file content
+      displayContents(contents);
+      message = contents.toString();
+    };
+    reader.readAsText(file);
+  }
+
+  function readSingleFile2(e) {
+    var file = e.target.files[0];
+    if (!file) {
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      contents2 = e.target.result;
+      // Display file content
+      displayContents(contents2);
+      message2 = contents2.toString();
+    };
+    reader.readAsText(file);
+  }
+   
+  function displayContents(contents) {
+    var element = document.getElementById('file-content');
+    element.innerHTML = "File contents: " + contents;
+    console.log(contents.toString());
+  }
+   
+  document.getElementById('file-input').addEventListener('change', readSingleFile, false);
+  document.getElementById('file-input2').addEventListener('change', readSingleFile2, false);
+
+function myEncrypt(){
+
+  // Code goes here
+  var keySize = 256;
+  var ivSize = 128;
+  var iterations = 100;
+
+  var password = "Secret Password";
+
+
+  function encrypt (msg, pass) {
+    var salt = CryptoJS.lib.WordArray.random(128/8);
+    
+    var key = CryptoJS.PBKDF2(pass, salt, {
+        keySize: keySize/32,
+        iterations: iterations
+      });
+
+    var iv = CryptoJS.lib.WordArray.random(128/8);
+    
+    var encrypted = CryptoJS.AES.encrypt(msg, key, { 
+      iv: iv, 
+      padding: CryptoJS.pad.Pkcs7,
+      mode: CryptoJS.mode.CBC
+      
+    });
+    
+    // salt, iv will be hex 32 in length
+    // append them to the ciphertext for use  in decryption
+    var transitmessage = salt.toString()+ iv.toString() + encrypted.toString();
+    return transitmessage;
+  }
+
+  function decrypt (transitmessage, pass) {
+    var salt = CryptoJS.enc.Hex.parse(transitmessage.substr(0, 32));
+    var iv = CryptoJS.enc.Hex.parse(transitmessage.substr(32, 32))
+    var encrypted = transitmessage.substring(64);
+    
+    var key = CryptoJS.PBKDF2(pass, salt, {
+        keySize: keySize/32,
+        iterations: iterations
+      });
+
+    var decrypted = CryptoJS.AES.decrypt(encrypted, key, { 
+      iv: iv, 
+      padding: CryptoJS.pad.Pkcs7,
+      mode: CryptoJS.mode.CBC
+      
+    })
+    return decrypted;
+  }
+
+  var encrypted = encrypt(message, password);
+  var decrypted = decrypt(encrypted, password);
+
+  $('#encrypted').text("Encrypted: "+encrypted);
+  
+  $('#decrypted').text("Decrypted: "+ decrypted.toString(CryptoJS.enc.Utf8));
+
+
+}
+
+  
+
+  function hashCode(){
+
+    
+    var hmac = hex_hmac_md5("key", contents);
+    var hmac2 = hex_hmac_md5("key", contents2);
+
+
+
+    console.log(hmac);
+
+    var hashContent = document.getElementById("hash-content");
+    hashContent.innerHTML = "First file hash (HMAC MD5): "+ hmac;
+    var hashContent2 = document.getElementById("hash-content2");
+    hashContent2.innerHTML = "Second file hash (HMAC MD5): " + hmac2;
+
+    if(hmac===hmac2){
+      alert("Data not have been modified. Data Integrity is ok!");
+      document.getElementById("encrypt").disabled = false;
+    }
+    else
+    {
+      alert("Warning! Data has been modified");
+      document.getElementById("encrypt").disabled = true;
+    }
+
+
+    /*hashCode = function(s){
+      return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);              
+    }
+
+    var hashed = hashCode(contents.toString());
+      $('#hash').text(hashed);
+
+      document.getElementById('hash').text = "Hashed" + hashed;
+
+    }*/
+}
+
+   
+
+</script>
+
